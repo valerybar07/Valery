@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  demo.html — Demo interactiva de agenda con recordatorios
+  Rubro de ejemplo: consultorio.
+  HTML + CSS + JS puro, sin servidor, sin API, sin backend.
+  ============================================================
+-->
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo · Agenda con recordatorios — Valeria</title>
+
+<style>
+  /* Mismas variables de diseño que el resto del sitio, para que
+     la demo se sienta parte de la misma página. */
+  @import url('https://fonts.googleapis.com/css2?family=Piazzolla:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:        #1B2A3D;
+    --paper:      #FAF6EC;
+    --paper-dim:  #F1EBDA;
+    --text:       #26221C;
+    --text-soft:  #55503f;
+    --rule:       #C9BFA6;
+    --verde:      #3D6B5C;
+    --verde-dim:  #E4ECE7;
+    --ocre:       #D8A13B;
+    --ocre-dark:  #A97A22;
+    --rojo:       #B65B4A;
+    --serif:      'Piazzolla', Georgia, serif;
+    --sans:       'Work Sans', -apple-system, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  @media (prefers-reduced-motion: reduce){
+    html{ scroll-behavior:auto; }
+    *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+  }
+
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.55;
+  }
+  a{ color:inherit; }
+  .wrap{ max-width:720px; margin:0 auto; padding:0 24px; }
+  h1,h2,h3{ font-family:var(--serif); font-weight:600; margin:0; }
+
+  /* ---------------- Barra superior (volver al sitio) ---------------- */
+  .topnav{
+    background:var(--ink);
+    padding:16px 0;
+  }
+  .topnav-inner{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .topnav-brand{
+    font-family:var(--serif);
+    font-weight:600;
+    color:var(--paper);
+    font-size:16px;
+  }
+  .topnav-link{
+    color:var(--ocre);
+    font-size:14.5px;
+    text-decoration:none;
+    border-bottom:1px solid var(--ocre);
+    padding-bottom:1px;
+  }
+
+  /* ---------------- Encabezado de la demo ---------------- */
+  .demo-header{
+    padding:56px 0 40px;
+    border-bottom:1px solid var(--rule);
+  }
+  .demo-header .kicker{
+    font-size:14px;
+    color:var(--verde);
+    font-weight:600;
+    margin-bottom:12px;
+  }
+  .demo-header h1{
+    font-size:clamp(26px, 4vw, 34px);
+    max-width:20ch;
+    line-height:1.2;
+  }
+
+  /* ---------------- Frase "antes" y "después" ---------------- */
+  .frase-bloque{
+    padding:40px 0;
+  }
+  .frase-bloque .demo-tag{
+    display:inline-block;
+    font-size:12.5px;
+    font-weight:600;
+    padding:3px 10px;
+    border-radius:12px;
+    margin-bottom:14px;
+  }
+  .frase-bloque.antes{ background:var(--paper-dim); border-bottom:1px solid var(--rule); }
+  .frase-bloque.antes .demo-tag{ background:#E4D9C2; color:var(--text-soft); }
+  .frase-bloque.despues{ background:var(--verde-dim); }
+  .frase-bloque.despues .demo-tag{ background:var(--verde); color:var(--paper); }
+  .frase-bloque p.frase{
+    font-size:19px;
+    max-width:46ch;
+    margin:0;
+    color:var(--text);
+  }
+  .frase-bloque.antes p.frase{ color:var(--text-soft); }
+
+  /* ---------------- Sección de la demo interactiva ---------------- */
+  .demo-interactiva{
+    padding:48px 0 64px;
+    border-bottom:1px solid var(--rule);
+  }
+  .agenda-card{
+    border:1px solid var(--rule);
+    background:var(--paper);
+    margin-top:24px;
+  }
+  .agenda-card-header{
+    padding:18px 20px;
+    border-bottom:1px solid var(--rule);
+    background:var(--paper-dim);
+  }
+  .agenda-card-header .consultorio{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:16.5px;
+  }
+  .agenda-card-header .fecha{
+    font-size:13.5px;
+    color:var(--text-soft);
+    margin-top:2px;
+  }
+
+  .slots-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+    padding:20px;
+  }
+  @media (max-width:480px){
+    .slots-grid{ grid-template-columns:repeat(2, 1fr); }
+  }
+  .slot{
+    border:1.5px solid var(--verde);
+    background:var(--paper);
+    color:var(--verde);
+    border-radius:4px;
+    padding:12px 8px;
+    font-family:var(--sans);
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    text-align:center;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .slot:hover{ background:var(--verde); color:var(--paper); }
+  .slot:focus-visible{ outline:2px solid var(--verde); outline-offset:2px; }
+  .slot.ocupado{
+    border-color:var(--rule);
+    background:var(--paper-dim);
+    color:var(--text-soft);
+    cursor:not-allowed;
+    font-weight:500;
+  }
+  .slot.ocupado:hover{ background:var(--paper-dim); color:var(--text-soft); }
+  .slot.reservado{
+    border-color:var(--verde);
+    background:var(--verde);
+    color:var(--paper);
+    cursor:default;
+  }
+  .slot.reservado:hover{ background:var(--verde); color:var(--paper); }
+  .slot small{ display:block; font-weight:400; font-size:11.5px; margin-top:2px; }
+
+  .aviso-ocupado{
+    padding:0 20px 16px;
+    font-size:13.5px;
+    color:var(--rojo);
+    display:none;
+  }
+  .aviso-ocupado.visible{ display:block; }
+
+  /* ---------------- Formulario de reserva ---------------- */
+  .form-reserva{
+    display:none;
+    padding:0 20px 22px;
+    border-top:1px dashed var(--rule);
+    margin-top:4px;
+  }
+  .form-reserva.visible{ display:block; padding-top:20px; }
+  .form-reserva .slot-elegido{
+    font-size:14.5px;
+    color:var(--text-soft);
+    margin-bottom:14px;
+  }
+  .form-reserva .slot-elegido strong{ color:var(--text); }
+  .campo{ margin-bottom:14px; }
+  .campo label{
+    display:block;
+    font-size:13.5px;
+    font-weight:600;
+    margin-bottom:6px;
+    color:var(--text);
+  }
+  .campo input, .campo select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    font-family:var(--sans);
+    font-size:14.5px;
+    background:var(--paper);
+    color:var(--text);
+  }
+  .campo input:focus, .campo select:focus{
+    outline:2px solid var(--verde);
+    outline-offset:1px;
+  }
+  .btn-confirmar{
+    background:var(--verde);
+    color:var(--paper);
+    border:none;
+    padding:11px 22px;
+    border-radius:4px;
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:14.5px;
+    cursor:pointer;
+  }
+  .btn-confirmar:hover{ background:#2f584c; }
+  .error-form{
+    font-size:13px;
+    color:var(--rojo);
+    margin-top:8px;
+    display:none;
+  }
+  .error-form.visible{ display:block; }
+
+  /* ---------------- Simulación de WhatsApp del paciente ---------------- */
+  .whatsapp-sim{
+    margin-top:26px;
+  }
+  .whatsapp-sim .etiqueta{
+    font-size:12.5px;
+    color:var(--text-soft);
+    margin-bottom:10px;
+    font-style:italic;
+  }
+  .burbuja{
+    background:var(--verde-dim);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:12px 14px;
+    font-size:14px;
+    max-width:420px;
+    margin-bottom:10px;
+    opacity:0;
+    transform:translateY(6px);
+    animation:aparecer 0.35s ease forwards;
+  }
+  @keyframes aparecer{
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .burbuja .remitente{
+    font-weight:600;
+    font-size:12.5px;
+    color:var(--verde);
+    margin-bottom:4px;
+  }
+
+  .acciones-demo{
+    margin-top:24px;
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .btn-reiniciar{
+    background:none;
+    border:1px solid var(--rule);
+    color:var(--text-soft);
+    padding:9px 16px;
+    border-radius:4px;
+    font-family:var(--sans);
+    font-size:13.5px;
+    cursor:pointer;
+  }
+  .btn-reiniciar:hover{ background:var(--paper-dim); }
+
+  /* ---------------- CTA de cierre ---------------- */
+  .cta-final{
+    background:var(--ink);
+    color:var(--paper);
+    text-align:center;
+    padding:70px 0 80px;
+  }
+  .cta-final h2{
+    color:var(--paper);
+    font-size:clamp(22px, 3.6vw, 28px);
+    max-width:22ch;
+    margin:0 auto 26px;
+  }
+  .btn-agendar{
+    display:inline-block;
+    background:var(--ocre);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:16px;
+    padding:15px 30px;
+    border-radius:4px;
+    text-decoration:none;
+    transition:background 0.15s ease;
+  }
+  .btn-agendar:hover{ background:var(--ocre-dark); }
+  .btn-agendar:focus-visible{ outline:2px solid var(--paper); outline-offset:3px; }
+
+  footer{
+    text-align:center;
+    padding:24px 0;
+    font-size:13px;
+    color:var(--text-soft);
+    background:var(--paper);
+  }
+</style>
+</head>
+<body>
+
+  <!-- Barra superior con vuelta al sitio principal -->
+  <nav class="topnav">
+    <div class="wrap topnav-inner">
+      <span class="topnav-brand">Valeria</span>
+      <a href="index.html" class="topnav-link">Volver al inicio</a>
+    </div>
+  </nav>
+
+  <header class="demo-header">
+    <div class="wrap">
+      <p class="kicker">Demo interactiva</p>
+      <h1>Así se ordena la agenda de un consultorio</h1>
+    </div>
+  </header>
+
+  <!-- 1) EL ANTES, EN UNA FRASE -->
+  <section class="frase-bloque antes">
+    <div class="wrap">
+      <span class="demo-tag">Antes</span>
+      <p class="frase">En muchos consultorios los turnos se anotan a mano, y es fácil que dos pacientes queden citados a la misma hora sin que nadie se dé cuenta hasta que los dos están en la sala de espera.</p>
+    </div>
+  </section>
+
+  <!-- 2) LA DEMO: DEJAR USARLA -->
+  <section class="demo-interactiva">
+    <div class="wrap">
+      <h2 style="font-size:20px; margin-bottom:6px;">Probá reservar un turno</h2>
+      <p style="color:var(--text-soft); font-size:15px; margin:0;">
+        Elegí un horario libre, cargá los datos y mirá qué le llega al paciente al instante.
+      </p>
+
+      <div class="agenda-card">
+        <div class="agenda-card-header">
+          <div class="consultorio">Consultorio Dra. Belén Ortiz — Clínica General</div>
+          <div class="fecha" id="fecha-agenda"><!-- se completa con JS --></div>
+        </div>
+
+        <!-- Grilla de horarios: se dibuja con JS a partir del arreglo "turnos" -->
+        <div class="slots-grid" id="slots-grid"></div>
+
+        <!-- Aviso cuando se hace click en un horario ya ocupado -->
+        <p class="aviso-ocupado" id="aviso-ocupado">Ese horario ya está reservado. Elegí otro para ver cómo funciona.</p>
+
+        <!-- Formulario que aparece al elegir un horario libre -->
+        <form class="form-reserva" id="form-reserva">
+          <p class="slot-elegido">Turno elegido: <strong id="slot-elegido-texto"></strong></p>
+          <div class="campo">
+            <label for="input-nombre">Nombre del paciente</label>
+            <input type="text" id="input-nombre" placeholder="Ej: Rocío Medina" autocomplete="off">
+          </div>
+          <div class="campo">
+            <label for="input-motivo">Motivo de la consulta</label>
+            <select id="input-motivo">
+              <option value="Control">Control</option>
+              <option value="Primera consulta">Primera consulta</option>
+              <option value="Resultados de estudios">Resultados de estudios</option>
+            </select>
+          </div>
+          <button type="submit" class="btn-confirmar">Confirmar turno</button>
+          <p class="error-form" id="error-form">Che, faltó el nombre del paciente.</p>
+        </form>
+
+        <!-- Acá aparecen los mensajes simulados de WhatsApp -->
+        <div class="whatsapp-sim wrap" id="whatsapp-sim" style="display:none; padding:0 20px 22px;">
+          <p class="etiqueta">Así le queda al paciente en su WhatsApp:</p>
+          <div id="burbujas"></div>
+        </div>
+      </div>
+
+      <div class="acciones-demo">
+        <button type="button" class="btn-reiniciar" id="btn-reiniciar">Reiniciar demo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3) EL DESPUÉS, EN UNA FRASE -->
+  <section class="frase-bloque despues">
+    <div class="wrap">
+      <span class="demo-tag">Después</span>
+      <p class="frase">Con la agenda ordenada, cada paciente recibe la confirmación al instante y un recordatorio el día anterior, así que nadie se olvida y no se pisan dos turnos en el mismo horario.</p>
+    </div>
+  </section>
+
+  <!-- BOTÓN DE CIERRE DE LA DEMO -->
+  <section class="cta-final">
+    <div class="wrap">
+      <h2>¿Lo ves claro? Agendá 20 minutos y te armo la versión para tu negocio</h2>
+      <a href="index.html#agendar" class="btn-agendar">Agendá una reunión de 20 minutos</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">Valeria · Turnos y pedidos, ordenados</div>
+  </footer>
+
+<!-- ============================================================
+     JAVASCRIPT DE LA DEMO
+     Todo corre en el navegador, no hay servidor ni API.
+     ============================================================ -->
+<script>
+  // ---------- Datos de ejemplo del consultorio ----------
+  // Cada turno tiene una hora y un estado: "libre" u "ocupado".
+  // Los ocupados ya traen un nombre de paciente cargado, para
+  // simular una agenda real que ya tiene actividad.
+  var turnos = [
+    { hora: "09:00", estado: "libre" },
+    { hora: "09:30", estado: "ocupado", paciente: "Rodrigo Ibáñez" },
+    { hora: "10:00", estado: "libre" },
+    { hora: "10:30", estado: "libre" },
+    { hora: "11:00", estado: "ocupado", paciente: "Lucía Fernández" },
+    { hora: "11:30", estado: "libre" },
+    { hora: "12:00", estado: "ocupado", paciente: "Norberto Acosta" },
+    { hora: "12:30", estado: "libre" },
+    { hora: "13:00", estado: "libre" }
+  ];
+
+  var slotSeleccionado = null; // índice del turno que el usuario eligió
+
+  var gridEl        = document.getElementById('slots-grid');
+  var avisoEl       = document.getElementById('aviso-ocupado');
+  var formEl        = document.getElementById('form-reserva');
+  var slotTextoEl   = document.getElementById('slot-elegido-texto');
+  var inputNombre   = document.getElementById('input-nombre');
+  var inputMotivo   = document.getElementById('input-motivo');
+  var errorFormEl   = document.getElementById('error-form');
+  var whatsappSimEl = document.getElementById('whatsapp-sim');
+  var burbujasEl    = document.getElementById('burbujas');
+  var fechaEl       = document.getElementById('fecha-agenda');
+
+  // ---------- Fecha de "hoy", para que la agenda se vea real ----------
+  function mostrarFechaDeHoy() {
+    var hoy = new Date();
+    var opciones = { weekday: 'long', day: 'numeric', month: 'long' };
+    var texto = hoy.toLocaleDateString('es-AR', opciones);
+    // Primera letra en mayúscula (por ejemplo "Martes 9 de septiembre")
+    texto = texto.charAt(0).toUpperCase() + texto.slice(1);
+    fechaEl.textContent = "Hoy · " + texto;
+  }
+
+  // ---------- Dibuja los botones de horario según el estado actual ----------
+  function dibujarGrilla() {
+    gridEl.innerHTML = '';
+    turnos.forEach(function (turno, indice) {
+      var boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'slot ' + (turno.estado === 'ocupado' ? 'ocupado' : (turno.estado === 'reservado' ? 'reservado' : ''));
+
+      if (turno.estado === 'libre') {
+        boton.innerHTML = turno.hora + '<small>Libre</small>';
+      } else if (turno.estado === 'ocupado') {
+        boton.innerHTML = turno.hora + '<small>Ocupado</small>';
+      } else {
+        boton.innerHTML = turno.hora + '<small>' + turno.paciente + '</small>';
+      }
+
+      boton.addEventListener('click', function () { elegirSlot(indice); });
+      gridEl.appendChild(boton);
+    });
+  }
+
+  // ---------- Qué pasa al clickear un horario ----------
+  function elegirSlot(indice) {
+    var turno = turnos[indice];
+
+    if (turno.estado === 'ocupado' || turno.estado === 'reservado') {
+      // Mostramos el aviso de que ese horario ya no está disponible
+      avisoEl.classList.add('visible');
+      formEl.classList.remove('visible');
+      return;
+    }
+
+    avisoEl.classList.remove('visible');
+    slotSeleccionado = indice;
+    slotTextoEl.textContent = turno.hora + " hs";
+    errorFormEl.classList.remove('visible');
+    formEl.classList.add('visible');
+    formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ---------- Al confirmar el formulario de reserva ----------
+  formEl.addEventListener('submit', function (evento) {
+    evento.preventDefault();
+
+    var nombre = inputNombre.value.trim();
+    if (!nombre) {
+      errorFormEl.classList.add('visible');
+      return;
+    }
+    errorFormEl.classList.remove('visible');
+
+    var motivo = inputMotivo.value;
+    var turno = turnos[slotSeleccionado];
+
+    // Marcamos el turno como reservado con el nombre cargado
+    turno.estado = 'reservado';
+    turno.paciente = nombre;
+    dibujarGrilla();
+    formEl.classList.remove('visible');
+
+    // Mostramos la simulación de WhatsApp con las dos burbujas:
+    // primero la confirmación inmediata, después el recordatorio.
+    burbujasEl.innerHTML = '';
+    whatsappSimEl.style.display = 'block';
+
+    agregarBurbuja(
+      'Confirmación automática',
+      'Hola ' + nombre.split(' ')[0] + ', tu turno con la Dra. Ortiz quedó confirmado para hoy a las ' + turno.hora + 'hs (' + motivo + ').'
+    );
+
+    setTimeout(function () {
+      agregarBurbuja(
+        'Recordatorio automático',
+        'Te recordamos tu turno de hoy a las ' + turno.hora + 'hs con la Dra. Ortiz. Si no podés venir, respondé este mensaje para reprogramarlo.'
+      );
+      whatsappSimEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 1400);
+  });
+
+  // ---------- Agrega una burbuja de mensaje simulado ----------
+  function agregarBurbuja(remitente, texto) {
+    var burbuja = document.createElement('div');
+    burbuja.className = 'burbuja';
+    burbuja.innerHTML = '<div class="remitente">' + remitente + '</div>' + texto;
+    burbujasEl.appendChild(burbuja);
+  }
+
+  // ---------- Botón para reiniciar la demo desde cero ----------
+  document.getElementById('btn-reiniciar').addEventListener('click', function () {
+    turnos = [
+      { hora: "09:00", estado: "libre" },
+      { hora: "09:30", estado: "ocupado", paciente: "Rodrigo Ibáñez" },
+      { hora: "10:00", estado: "libre" },
+      { hora: "10:30", estado: "libre" },
+      { hora: "11:00", estado: "ocupado", paciente: "Lucía Fernández" },
+      { hora: "11:30", estado: "libre" },
+      { hora: "12:00", estado: "ocupado", paciente: "Norberto Acosta" },
+      { hora: "12:30", estado: "libre" },
+      { hora: "13:00", estado: "libre" }
+    ];
+    slotSeleccionado = null;
+    avisoEl.classList.remove('visible');
+    formEl.classList.remove('visible');
+    whatsappSimEl.style.display = 'none';
+    burbujasEl.innerHTML = '';
+    inputNombre.value = '';
+    dibujarGrilla();
+  });
+
+  // ---------- Arranque ----------
+  mostrarFechaDeHoy();
+  dibujarGrilla();
+</script>
+
+</body>
+</html>
